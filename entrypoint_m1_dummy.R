@@ -35,7 +35,7 @@ df$abs_diff <- abs(df$cont - df$random)
 ## Write outputs
 # per-cell TSV (cell, cont, random, abs_diff)
 
-summary_list <- list(--
+summary_list <- list(
   n_cells         = nrow(df),
   mean_abs_diff   = mean(df$abs_diff),
   median_abs_diff = median(df$abs_diff),

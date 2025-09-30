@@ -9,6 +9,8 @@ parser$add_argument("--output_dir", "-o", required = TRUE, help= "Output directo
 parser$add_argument("--name", "-n", required = TRUE, help= "Dataset id used in output filenames")
 parser$add_argument("--soupx.percell", dest = "percell_rds", required = TRUE, help= "Path to SoupX per-cell contamination RDS (colums: cell, cont)")
 parser$add_argument("--seed", type = "integer", default = 1, help = "Random seed for reproducibility (ensures same random colum each run)")
+parser$add_argument("--data.sce", dest = "sce_path", required = FALSE)
+parser$add_argument("--soupx.corrected", dest = "soupx_rds", required = FALSE)
 args <- parser$parse_args()
 
 # Output paths -> ensures output directory exists, defines two output
@@ -33,7 +35,7 @@ df$abs_diff <- abs(df$cont - df$random)
 ## Write outputs
 # per-cell TSV (cell, cont, random, abs_diff)
 
-summary_list <- list(
+summary_list <- list(--
   n_cells         = nrow(df),
   mean_abs_diff   = mean(df$abs_diff),
   median_abs_diff = median(df$abs_diff),

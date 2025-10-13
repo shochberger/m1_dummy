@@ -1,21 +1,24 @@
 #!/usr/bin/env Rscript
 
+# m1_dummy: abd(cont - random[0.02, 0.05]) per cell
+# just a dummy metric for testing.
+
 library(argparse)
 library(jsonlite)
 
-parser <- ArgumentParser(description = "m1_dummy: abs(cont - random[0.02,0.05]) per cell")
+p <- ArgumentParser(description = "m1_dummy: abs(cont - random[0.02,0.05]) per cell")
+p$add_argument("--output_dir", "-o", required = TRUE, help= "Output directory for results")
+p$add_argument("--name", "-n", required = TRUE, help= "Dataset id used in output filenames")
+p$add_argument("--method.percell", dest = "percell_rds", required = TRUE, help= "Path to per-cell contamination RDS (colums: cell, cont)")
+p$add_argument("--seed", type = "integer", default = 1, help = "Random seed for reproducibility (ensures same random colum each run)")
+p$add_argument("--method.meta", dest= "method_meta", required=TRUE, help= "Sidecar JSON with method info")
+#p$add_argument("--data.sce", dest = "sce_path", required = FALSE)
+#p$add_argument("--soupx.corrected", dest = "soupx_rds", required = FALSE)
+args <- p$parse_args()
 
-parser$add_argument("--output_dir", "-o", required = TRUE, help= "Output directory for results")
-parser$add_argument("--name", "-n", required = TRUE, help= "Dataset id used in output filenames")
-parser$add_argument("--soupx.percell", dest = "percell_rds", required = TRUE, help= "Path to SoupX per-cell contamination RDS (colums: cell, cont)")
-parser$add_argument("--seed", type = "integer", default = 1, help = "Random seed for reproducibility (ensures same random colum each run)")
-parser$add_argument("--data.sce", dest = "sce_path", required = FALSE)
-parser$add_argument("--soupx.corrected", dest = "soupx_rds", required = FALSE)
-args <- parser$parse_args()
-
-# Output paths -> ensures output directory exists, defines two output
+# Output paths
 dir.create(args$output_dir, recursive = TRUE, showWarnings = FALSE)
-json_path <- file.path(args$output_dir, paste0(args$name, ".m1_dummy_summary.json"))
+json_path <- file.path(args$output_dir, paste0(args$name, ".m1_dummy.json"))
 
 # Load and validate input
 if (!file.exists(args$percell_rds)) stop("Input RDS not found ...")
@@ -25,17 +28,21 @@ required_cols <- c("cell", "cont")
 missing_cols <- setdiff(required_cols, colnames(df))
 if (length(missing_cols) > 0) stop("Input table missing required column(s) ...")
 
-# compute dummy metrics -> random reference between 0.02 and 0.05 and computes abs(cont-random) per cell
-# Fix random seed so that random colums is reproducible across runs
+# Method ID from sidecar
+meta <- jsonlite::read_json(args$method_meta, simplifyVector = TRUE)
+method_id <- if(!is.null(meta$method)) meta$method else "unknown"
+
+# Compute dummy metrics -> random reference between 0.02 and 0.05 and computes abs(cont-random) per cell
+# Fix random seed so that random colum is reproducible across runs
 set.seed(args$seed)
 n <- nrow(df)
 df$random   <- runif(n, min = 0.02, max = 0.05)
 df$abs_diff <- abs(df$cont - df$random)
 
-## Write outputs
-# per-cell TSV (cell, cont, random, abs_diff)
-
+# Write output
 summary_list <- list(
+  dataset = args$name,
+  method = method_id,
   n_cells         = nrow(df),
   mean_abs_diff   = mean(df$abs_diff),
   median_abs_diff = median(df$abs_diff),

@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
-# m1_dummy: abd(cont - random[0.02, 0.05]) per cell
-# just a dummy metric for testing.
+# Dummy metric:: per cell compute abs(cont - random[0.02, 0.05]).Summarizes mean/median/p95.
+# Uses --method.meta to record the method ID. Output: {name}.m1_dummy.json.
 
 library(argparse)
 library(jsonlite)
@@ -9,11 +9,9 @@ library(jsonlite)
 p <- ArgumentParser(description = "m1_dummy: abs(cont - random[0.02,0.05]) per cell")
 p$add_argument("--output_dir", "-o", required = TRUE, help= "Output directory for results")
 p$add_argument("--name", "-n", required = TRUE, help= "Dataset id used in output filenames")
-p$add_argument("--method.percell", dest = "percell_rds", required = TRUE, help= "Path to per-cell contamination RDS (colums: cell, cont)")
+p$add_argument("--method.percell", dest = "percell_rds", required = TRUE, help= "RDS with colums:cell, cont)")
 p$add_argument("--seed", type = "integer", default = 1, help = "Random seed for reproducibility (ensures same random colum each run)")
 p$add_argument("--method.meta", dest= "method_meta", required=TRUE, help= "Sidecar JSON with method info")
-#p$add_argument("--data.sce", dest = "sce_path", required = FALSE)
-#p$add_argument("--soupx.corrected", dest = "soupx_rds", required = FALSE)
 args <- p$parse_args()
 
 # Output paths
@@ -32,14 +30,14 @@ if (length(missing_cols) > 0) stop("Input table missing required column(s) ...")
 meta <- jsonlite::read_json(args$method_meta, simplifyVector = TRUE)
 method_id <- if(!is.null(meta$method)) meta$method else "unknown"
 
-# Compute dummy metrics -> random reference between 0.02 and 0.05 and computes abs(cont-random) per cell
+# Compute dummy metrics -> random reference between 0.02 and 0.05.Computes abs(cont-random) per cell
 # Fix random seed so that random colum is reproducible across runs
 set.seed(args$seed)
 n <- nrow(df)
 df$random   <- runif(n, min = 0.02, max = 0.05)
 df$abs_diff <- abs(df$cont - df$random)
 
-# Write output
+# Write summary output
 summary_list <- list(
   dataset = args$name,
   method = method_id,
@@ -51,7 +49,7 @@ summary_list <- list(
 )
 writeLines(jsonlite::toJSON(summary_list, auto_unbox = TRUE, digits = 6), json_path)
 
-# Terminal message -> log line in job output
+# Terminal message
 cat(sprintf("[m1_dummy] Done for %s\n - summary JSON: %s\n",
             args$name, json_path))
 
